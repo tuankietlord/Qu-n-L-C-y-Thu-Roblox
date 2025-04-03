@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Tài khoản Cày thuê</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+    <style>
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; cursor: pointer; }
+        th:hover { background-color: #ddd; }
+        button { padding: 5px 10px; cursor: pointer; margin: 0 2px; }
+        input, select { margin: 5px; padding: 5px; }
+        
+        /* Giao diện đăng nhập và đăng ký */
+        #loginContainer, #guestLoginContainer, #guestRegisterContainer { 
+            display: none; 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            background: #fff; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); 
+            z-index: 1000; 
+            width: 300px; 
+            text-align: center; 
+        }
+        #loginContainer h2, #guestLoginContainer h2, #guestRegisterContainer h2 {
+            margin: 0 0 10px;
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #loginContainer p.subtitle, #guestLoginContainer p.subtitle, #guestRegisterContainer p.subtitle {
+            margin: 0 0 20px;
+            color: #666;
+            font-size: 14px;
+        }
+        #loginContainer input[type="text"],
+        #loginContainer input[type="password"],
+        #guestLoginContainer input[type="text"],
+        #guestLoginContainer input[type="password"],
+        #guestRegisterContainer input[type="text"],
+        #guestRegisterContainer input[type="password"],
+        #guestRegisterContainer input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background: #f5faff;
+        }
+        #loginContainer button,
+        #guestLoginContainer button,
+        #guestRegisterContainer button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        #loginContainer button:hover,
+        #guestLoginContainer button:hover,
+        #guestRegisterContainer button:hover {
+            background: #555;
+        }
+        #loginContainer a,
+        #guestLoginContainer a,
+        #guestRegisterContainer a {
+            display: block;
+            margin-top: 10px;
+            color: #007bff;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        #loginContainer a:hover,
+        #guestLoginContainer a:hover,
+        #guestRegisterContainer a:hover {
+            text-decoration: underline;
+        }
+        #loginError, #guestLoginError, #guestRegisterError {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        #mainContainer { display: block; }
+        /* Sửa lại CSS cho nút đăng nhập */
+        .login-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px; /* Khoảng cách giữa hai nút */
+            padding: 10px 0;
+        }
+        #loginBtn, #guestLoginBtn { 
+            padding: 8px 15px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 3px; 
+            cursor: pointer; 
+            font-size: 14px;
+        }
+        #loginBtn:hover, #guestLoginBtn:hover { background: #0056b3; }
+        .action-buttons { display: none; }
+        .logged-in .action-buttons { display: inline; }
+
+        /* CSS cho bảng thống kê */
+        #statisticsSection table {
+            width: 50%;
+            margin: 0 auto;
+        }
+        #statisticsSection th, #statisticsSection td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        #statisticsSection th {
+            background-color: #f2f2f2;
+        }
+        #statisticsSection h2 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Di chuyển nút vào một container để căn giữa -->
+    <div class="login-buttons">
+        <button id="loginBtn" onclick="showLogin()">Đăng nhập Admin</button>
+        <button id="guestLoginBtn" onclick="showGuestLogin()">Đăng nhập Khách</button>
+    </div>
+
+    <!-- Modal Đăng nhập Admin -->
+    <div id="loginContainer">
+        <h2>Đăng Nhập Admin</h2>
+        <p class="subtitle">Vui lòng nhập thông tin đăng nhập</p>
+        <input type="text" id="adminUsername" placeholder="Tên đăng nhập" value="tuankiet2012nek">
+        <input type="password" id="adminPassword" placeholder="Mật khẩu" value="19022012">
+        <button onclick="login()">Đăng Nhập</button>
+        <a href="#" onclick="forgotPassword()">Quên mật khẩu?</a>
+        <p id="loginError" style="display: none;">Sai tên đăng nhập hoặc mật khẩu!</p>
+    </div>
+
+    <!-- Modal Đăng nhập Khách -->
+    <div id="guestLoginContainer">
+        <h2>Đăng Nhập Khách</h2>
+        <p class="subtitle">Vui lòng nhập thông tin đăng nhập</p>
+        <input type="text" id="guestUsername" placeholder="Tên đăng nhập">
+        <input type="password" id="guestPassword" placeholder="Mật khẩu">
+        <button onclick="guestLogin()">Đăng Nhập</button>
+        <a href="#" onclick="showGuestRegister()">Chưa có tài khoản? Đăng ký</a>
+        <p id="guestLoginError" style="display: none;">Sai tên đăng nhập hoặc mật khẩu!</p>
+    </div>
+
+    <!-- Modal Đăng ký Khách -->
+    <div id="guestRegisterContainer">
+        <h2>Đăng Ký Khách</h2>
+        <p class="subtitle">Vui lòng nhập thông tin để đăng ký</p>
+        <input type="text" id="newGuestUsername" placeholder="Tên đăng nhập">
+        <input type="email" id="newGuestEmail" placeholder="Email (bắt buộc)">
+        <input type="password" id="newGuestPassword" placeholder="Mật khẩu">
+        <button onclick="guestRegister()">Đăng Ký</button>
+        <a href="#" onclick="showGuestLogin()">Đã có tài khoản? Đăng nhập</a>
+        <p id="guestRegisterError" style="display: none;">Vui lòng nhập đầy đủ thông tin!</p>
+    </div>
+
+    <div id="mainContainer">
+        <h1>Quản lý Tài khoản Cày thuê</h1>
+        <div id="addAccountSection" style="display: none;">
+            <input type="text" id="username" placeholder="Tên tài khoản">
+            <input type="password" id="password" placeholder="Mật khẩu">
+            <input type="text" id="note" placeholder="Ghi chú cần cày">
+            <input type="number" id="price" placeholder="Giá tiền (VNĐ)" min="0" step="1000">
+            <button id="addAccountBtn">Thêm</button>
+            <button onclick="logout()">Đăng xuất</button>
+        </div>
+        <!-- Thêm bảng thống kê -->
+        <div id="statisticsSection" style="display: none; margin-top: 20px;">
+            <h2>Thống kê trạng thái tài khoản</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Trạng thái</th>
+                        <th>Số lượng</th>
+                    </tr>
+                </thead>
+                <tbody id="statisticsList">
+                    <tr>
+                        <td>Đang duyệt</td>
+                        <td id="pendingCount">0</td>
+                    </tr>
+                    <tr>
+                        <td>Đang tiến hành</td>
+                        <td id="inProgressCount">0</td>
+                    </tr>
+                    <tr>
+                        <td>Hoàn thành</td>
+                        <td id="completedCount">0</td>
+                    </tr>
+                    <tr>
+                        <td>Từ chối</td>
+                        <td id="rejectedCount">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <input type="text" id="searchInput" placeholder="Tìm kiếm" onkeyup="searchAccounts()">
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">Tài khoản</th>
+                    <th onclick="sortTable(1)">Mật khẩu</th>
+                    <th onclick="sortTable(2)">Ghi chú</th>
+                    <th onclick="sortTable(3)">Giá tiền (VNĐ)</th>
+                    <th onclick="sortTable(4)">Trạng thái</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="accountList"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let isAdminLoggedIn = false;
+        let isGuestLoggedIn = false;
+        let currentUser = null; // Biến toàn cục để lưu username của người dùng hiện tại
+        let sortDirection = 1;
+        let lastSortedColumn = -1;
+
+        function initializeAdmin() {
+            const defaultAdmin = {
+                username: "tuankiet2012nek",
+                password: md5("19022012"),
+                email: "nguyenmanhtuankiet5.10@gmail.com" // Email admin để quên mật khẩu
+            };
+            localStorage.setItem("admin", JSON.stringify(defaultAdmin));
+        }
+
+        function showLogin() {
+            document.getElementById("loginContainer").style.display = "block";
+            document.getElementById("guestLoginContainer").style.display = "none";
+            document.getElementById("guestRegisterContainer").style.display = "none";
+        }
+
+        function showGuestLogin() {
+            document.getElementById("guestLoginContainer").style.display = "block";
+            document.getElementById("loginContainer").style.display = "none";
+            document.getElementById("guestRegisterContainer").style.display = "none";
+        }
+
+        function showGuestRegister() {
+            document.getElementById("guestRegisterContainer").style.display = "block";
+            document.getElementById("guestLoginContainer").style.display = "none";
+            document.getElementById("loginContainer").style.display = "none";
+        }
+
+        function hideLogin() {
+            document.getElementById("loginContainer").style.display = "none";
+            document.getElementById("adminUsername").value = "";
+            document.getElementById("adminPassword").value = "";
+            document.getElementById("loginError").style.display = "none";
+        }
+
+        function hideGuestLogin() {
+            document.getElementById("guestLoginContainer").style.display = "none";
+            document.getElementById("guestUsername").value = "";
+            document.getElementById("guestPassword").value = "";
+            document.getElementById("guestLoginError").style.display = "none";
+        }
+
+        function hideGuestRegister() {
+            document.getElementById("guestRegisterContainer").style.display = "none";
+            document.getElementById("newGuestUsername").value = "";
+            document.getElementById("newGuestEmail").value = "";
+            document.getElementById("newGuestPassword").value = "";
+            document.getElementById("guestRegisterError").style.display = "none";
+        }
+
+        function forgotPassword() {
+            const storedAdmin = JSON.parse(localStorage.getItem("admin"));
+            alert(`Vui lòng liên hệ admin qua email: ${storedAdmin.email} để khôi phục mật khẩu.`);
+        }
+
+        function login() {
+            if (typeof md5 !== "function") {
+                alert("Thư viện MD5 không tải được!");
+                return;
+            }
+            const username = document.getElementById("adminUsername").value.trim();
+            const password = md5(document.getElementById("adminPassword").value.trim());
+            const storedAdmin = JSON.parse(localStorage.getItem("admin"));
+
+            if (username === storedAdmin.username && password === storedAdmin.password) {
+                isAdminLoggedIn = true;
+                isGuestLoggedIn = false;
+                currentUser = "admin"; // Lưu người dùng hiện tại
+                document.getElementById("loginContainer").style.display = "none";
+                document.getElementById("loginBtn").parentElement.style.display = "none"; // Ẩn toàn bộ container nút
+                document.getElementById("addAccountSection").style.display = "block";
+                document.getElementById("statisticsSection").style.display = "block"; // Hiển thị bảng thống kê
+                document.getElementById("mainContainer").classList.add("logged-in");
+                loadAccounts();
+                updateStatistics(); // Cập nhật thống kê ngay sau khi đăng nhập
+            } else {
+                document.getElementById("loginError").style.display = "block";
+            }
+        }
+
+        function guestRegister() {
+            const username = document.getElementById("newGuestUsername").value.trim();
+            const email = document.getElementById("newGuestEmail").value.trim();
+            const password = document.getElementById("newGuestPassword").value.trim();
+
+            if (!username || !email || !password) {
+                document.getElementById("guestRegisterError").style.display = "block";
+                document.getElementById("guestRegisterError").innerText = "Vui lòng nhập đầy đủ thông tin!";
+                return;
+            }
+
+            if (!email.includes("@")) {
+                document.getElementById("guestRegisterError").style.display = "block";
+                document.getElementById("guestRegisterError").innerText = "Email không hợp lệ!";
+                return;
+            }
+
+            const guests = JSON.parse(localStorage.getItem("guests") || "[]");
+            const existing = guests.some(guest => guest.username === username || guest.email === email);
+            if (existing) {
+                document.getElementById("guestRegisterError").style.display = "block";
+                document.getElementById("guestRegisterError").innerText = "Tên đăng nhập hoặc email đã tồn tại!";
+                return;
+            }
+
+            guests.push({
+                username: username,
+                email: email,
+                password: md5(password)
+            });
+            localStorage.setItem("guests", JSON.stringify(guests));
+            alert("Đăng ký thành công! Vui lòng đăng nhập.");
+            hideGuestRegister();
+            showGuestLogin();
+        }
+
+        function guestLogin() {
+            if (typeof md5 !== "function") {
+                alert("Thư viện MD5 không tải được!");
+                return;
+            }
+            const username = document.getElementById("guestUsername").value.trim();
+            const password = md5(document.getElementById("guestPassword").value.trim());
+            const guests = JSON.parse(localStorage.getItem("guests") || "[]");
+
+            const guest = guests.find(g => g.username === username && g.password === password);
+            if (guest) {
+                isGuestLoggedIn = true;
+                isAdminLoggedIn = false;
+                currentUser = username; // Lưu username của guest hiện tại
+                document.getElementById("guestLoginContainer").style.display = "none";
+                document.getElementById("loginBtn").parentElement.style.display = "none"; // Ẩn toàn bộ container nút
+                document.getElementById("addAccountSection").style.display = "block";
+                document.getElementById("mainContainer").classList.add("logged-in");
+                loadAccounts();
+            } else {
+                document.getElementById("guestLoginError").style.display = "block";
+            }
+        }
+
+        function logout() {
+            isAdminLoggedIn = false;
+            isGuestLoggedIn = false;
+            currentUser = null; // Xóa người dùng hiện tại
+            document.getElementById("mainContainer").classList.remove("logged-in");
+            document.getElementById("addAccountSection").style.display = "none";
+            document.getElementById("statisticsSection").style.display = "none"; // Ẩn bảng thống kê
+            document.getElementById("loginBtn").parentElement.style.display = "flex"; // Hiển thị lại container nút
+            document.getElementById("adminUsername").value = "";
+            document.getElementById("adminPassword").value = "";
+            document.getElementById("loginError").style.display = "none";
+            loadAccounts();
+        }
+
+        function loadAccounts() {
+            const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+            const accountList = document.getElementById("accountList");
+            accountList.innerHTML = "";
+            accounts.forEach(acc => renderAccount(acc.username, acc.password, acc.note, acc.price, acc.status, acc.createdBy));
+        }
+
+        function renderAccount(username, password, note, price, status, createdBy) {
+            const accountList = document.getElementById("accountList");
+            const row = document.createElement("tr");
+            const statusSelect = document.createElement("select");
+            statusSelect.innerHTML = `
+                <option value="Đang duyệt">Đang duyệt</option>
+                <option value="Đang tiến hành">Đang tiến hành</option>
+                <option value="Hoàn thành">Hoàn thành</option>
+                <option value="Từ chối">Từ chối</option>`;
+            statusSelect.value = status;
+            statusSelect.disabled = !isAdminLoggedIn; // Chỉ admin thay đổi trạng thái
+            statusSelect.addEventListener("change", saveAccounts);
+
+            const showPassword = isAdminLoggedIn || (isGuestLoggedIn && createdBy === currentUser);
+
+            row.innerHTML = `
+                <td>${username}</td>
+                <td data-password="${password}" data-created-by="${createdBy}">${showPassword ? password : '****'}</td>
+                <td>${note}</td>
+                <td>${price} VNĐ</td>
+                <td></td>
+                <td>
+                    <span class="action-buttons">
+                        <button onclick="editAccount(this)">Sửa</button>
+                        <button onclick="deleteAccount(this)">Xóa</button>
+                    </span>
+                </td>`;
+            row.cells[4].appendChild(statusSelect);
+            accountList.appendChild(row);
+        }
+
+        function saveAccounts() {
+            if (!isAdminLoggedIn && !isGuestLoggedIn) return;
+            const rows = Array.from(document.querySelectorAll("#accountList tr"));
+            const accounts = rows.map(row => ({
+                username: row.cells[0].innerText,
+                password: row.cells[1].dataset.password,
+                note: row.cells[2].innerText,
+                price: parseInt(row.cells[3].innerText.replace(" VNĐ", "")),
+                status: row.cells[4].querySelector("select").value,
+                createdBy: row.cells[1].dataset.createdBy
+            }));
+            localStorage.setItem("accounts", JSON.stringify(accounts));
+            updateStatistics(); // Cập nhật thống kê
+        }
+
+        function addAccountToTable(username, password, note, price = 0, status = "Đang duyệt") {
+            const accountList = document.getElementById("accountList");
+            const existing = Array.from(accountList.rows).some(row => row.cells[0].innerText === username);
+            if (existing) {
+                alert("Tài khoản này đã tồn tại!");
+                return;
+            }
+            const createdBy = isAdminLoggedIn ? "admin" : currentUser; // Sử dụng currentUser
+            renderAccount(username, password, note, price, status, createdBy);
+            saveAccounts();
+            updateStatistics(); // Cập nhật thống kê
+        }
+
+        function addAccount() {
+            if (!isAdminLoggedIn && !isGuestLoggedIn) {
+                alert("Vui lòng đăng nhập để thêm tài khoản!");
+                return;
+            }
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const note = document.getElementById("note").value.trim();
+            const price = parseInt(document.getElementById("price").value) || 0;
+
+            if (!username || !password) {
+                alert("Vui lòng nhập đầy đủ tên tài khoản và mật khẩu.");
+                return;
+            }
+
+            addAccountToTable(username, password, note, price);
+        }
+
+        function deleteAccount(button) {
+            if (!isAdminLoggedIn) {
+                alert("Vui lòng đăng nhập để xóa tài khoản!");
+                return;
+            }
+            if (confirm("Bạn có chắc muốn xóa tài khoản này không?")) {
+                button.parentElement.parentElement.parentElement.remove();
+                saveAccounts();
+                updateStatistics(); // Cập nhật thống kê
+            }
+        }
+
+        function editAccount(button) {
+            if (!isAdminLoggedIn) {
+                alert("Vui lòng đăng nhập để chỉnh sửa tài khoản!");
+                return;
+            }
+            const row = button.parentElement.parentElement.parentElement;
+            const username = row.cells[0].innerText;
+            const password = row.cells[1].dataset.password;
+            const note = row.cells[2].innerText;
+            const price = parseInt(row.cells[3].innerText.replace(" VNĐ", ""));
+            const status = row.cells[4].querySelector("select").value;
+            const createdBy = row.cells[1].dataset.createdBy;
+
+            row.innerHTML = `
+                <td><input type="text" value="${username}"></td>
+                <td><input type="text" value="${password}" data-password="${password}" data-created-by="${createdBy}"></td>
+                <td><input type="text" value="${note}"></td>
+                <td><input type="number" value="${price}" min="0" step="1000"></td>
+                <td><select>
+                    <option value="Đang duyệt" ${status === "Đang duyệt" ? "selected" : ""}>Đang duyệt</option>
+                    <option value="Đang tiến hành" ${status === "Đang tiến hành" ? "selected" : ""}>Đang tiến hành</option>
+                    <option value="Hoàn thành" ${status === "Hoàn thành" ? "selected" : ""}>Hoàn thành</option>
+                    <option value="Từ chối" ${status === "Từ chối" ? "selected" : ""}>Từ chối</option>
+                </select></td>
+                <td>
+                    <button onclick="saveEdit(this)">Lưu</button>
+                    <button onclick="cancelEdit(this, '${username}', '${password}', '${note}', ${price}, '${status}', '${createdBy}')">Hủy</button>
+                </td>`;
+        }
+
+        function saveEdit(button) {
+            if (!isAdminLoggedIn) return;
+            const row = button.parentElement.parentElement;
+            const newUsername = row.cells[0].querySelector("input").value.trim();
+            const newPassword = row.cells[1].querySelector("input").value.trim();
+            const newNote = row.cells[2].querySelector("input").value.trim();
+            const newPrice = parseInt(row.cells[3].querySelector("input").value) || 0;
+            const newStatus = row.cells[4].querySelector("select").value;
+            const createdBy = row.cells[1].dataset.createdBy;
+
+            if (!newUsername || !newPassword) {
+                alert("Vui lòng nhập đầy đủ tên tài khoản và mật khẩu.");
+                return;
+            }
+
+            const statusSelect = document.createElement("select");
+            statusSelect.innerHTML = `
+                <option value="Đang duyệt">Đang duyệt</option>
+                <option value="Đang tiến hành">Đang tiến hành</option>
+                <option value="Hoàn thành">Hoàn thành</option>
+                <option value="Từ chối">Từ chối</option>`;
+            statusSelect.value = newStatus;
+            statusSelect.addEventListener("change", saveAccounts);
+
+            row.innerHTML = `
+                <td>${newUsername}</td>
+                <td data-password="${newPassword}" data-created-by="${createdBy}">${isAdminLoggedIn ? newPassword : (isGuestLoggedIn && createdBy === currentUser ? newPassword : '****')}</td>
+                <td>${newNote}</td>
+                <td>${newPrice} VNĐ</td>
+                <td></td>
+                <td>
+                    <span class="action-buttons">
+                        <button onclick="editAccount(this)">Sửa</button>
+                        <button onclick="deleteAccount(this)">Xóa</button>
+                    </span>
+                </td>`;
+            row.cells[4].appendChild(statusSelect);
+            saveAccounts();
+            updateStatistics(); // Cập nhật thống kê
+        }
+
+        function cancelEdit(button, username, password, note, price, status, createdBy) {
+            const row = button.parentElement.parentElement;
+            const statusSelect = document.createElement("select");
+            statusSelect.innerHTML = `
+                <option value="Đang duyệt">Đang duyệt</option>
+                <option value="Đang tiến hành">Đang tiến hành</option>
+                <option value="Hoàn thành">Hoàn thành</option>
+                <option value="Từ chối">Từ chối</option>`;
+            statusSelect.value = status;
+            statusSelect.disabled = !isAdminLoggedIn;
+            statusSelect.addEventListener("change", saveAccounts);
+
+            row.innerHTML = `
+                <td>${username}</td>
+                <td data-password="${password}" data-created-by="${createdBy}">${isAdminLoggedIn ? password : (isGuestLoggedIn && createdBy === currentUser ? password : '****')}</td>
+                <td>${note}</td>
+                <td>${price} VNĐ</td>
+                <td></td>
+                <td>
+                    <span class="action-buttons">
+                        <button onclick="editAccount(this)">Sửa</button>
+                        <button onclick="deleteAccount(this)">Xóa</button>
+                    </span>
+                </td>`;
+            row.cells[4].appendChild(statusSelect);
+        }
+
+        function searchAccounts() {
+            const searchTerm = document.getElementById("searchInput").value.trim().toLowerCase();
+            const rows = document.querySelectorAll("#accountList tr");
+
+            rows.forEach(row => {
+                const username = row.cells[0].innerText.toLowerCase();
+                const password = row.cells[1].dataset.password.toLowerCase();
+                const note = row.cells[2].innerText.toLowerCase();
+                const price = row.cells[3].innerText.replace(" VNĐ", "").toLowerCase();
+                const status = row.cells[4].querySelector("select").value.toLowerCase();
+
+                if (username.includes(searchTerm) || password.includes(searchTerm) || 
+                    note.includes(searchTerm) || price.includes(searchTerm) || 
+                    status.includes(searchTerm)) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById("accountList");
+            const rows = Array.from(table.rows);
+            const isSameColumn = lastSortedColumn === columnIndex;
+
+            sortDirection = isSameColumn ? -sortDirection : 1;
+            lastSortedColumn = columnIndex;
+
+            rows.sort((a, b) => {
+                let aValue = columnIndex === 1 ? a.cells[columnIndex].dataset.password : a.cells[columnIndex].innerText;
+                let bValue = columnIndex === 1 ? b.cells[columnIndex].dataset.password : b.cells[columnIndex].innerText;
+
+                if (columnIndex === 3) {
+                    aValue = parseInt(a.cells[columnIndex].innerText.replace(" VNĐ", ""));
+                    bValue = parseInt(b.cells[columnIndex].innerText.replace(" VNĐ", ""));
+                    return (aValue - bValue) * sortDirection;
+                }
+                if (columnIndex === 4) {
+                    aValue = a.cells[columnIndex].querySelector("select").value;
+                    bValue = b.cells[columnIndex].querySelector("select").value;
+                }
+
+                return aValue.localeCompare(bValue) * sortDirection;
+            });
+
+            rows.forEach(row => table.appendChild(row));
+        }
+
+        // Hàm cập nhật thống kê
+        function updateStatistics() {
+            if (!isAdminLoggedIn) return; // Chỉ cập nhật thống kê nếu admin đã đăng nhập
+
+            const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+            
+            // Đếm số lượng tài khoản theo trạng thái
+            const pendingCount = accounts.filter(acc => acc.status === "Đang duyệt").length;
+            const inProgressCount = accounts.filter(acc => acc.status === "Đang tiến hành").length;
+            const completedCount = accounts.filter(acc => acc.status === "Hoàn thành").length;
+            const rejectedCount = accounts.filter(acc => acc.status === "Từ chối").length;
+
+            // Cập nhật số liệu vào bảng thống kê
+            document.getElementById("pendingCount").innerText = pendingCount;
+            document.getElementById("inProgressCount").innerText = inProgressCount;
+            document.getElementById("completedCount").innerText = completedCount;
+            document.getElementById("rejectedCount").innerText = rejectedCount;
+        }
+
+        initializeAdmin();
+        loadAccounts();
+        document.getElementById("addAccountBtn").addEventListener("click", addAccount);
+    </script>
+</body>
+</html>
